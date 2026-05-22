@@ -6,7 +6,9 @@
 <title>Google Drive Audit — Free tool by Pics.io</title>
 <meta name="description" content="See what's actually inside your Google Drive. Free audit shows file types, duplicates, and wasted space in 60 seconds." />
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.googleapis.com https://accounts.google.com https://oauth2.googleapis.com; frame-src https://accounts.google.com https://content.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; base-uri 'self'; form-action 'none'; object-src 'none'" />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -429,7 +431,7 @@ function renderResults(files) {
 
   // Largest files
   document.getElementById('largest').innerHTML = largest.map(f =>
-    `<li><a class="fname" href="${f.webViewLink || '#'}" target="_blank" style="color:#333;text-decoration:none;">${escapeHtml(f.name)}</a><span class="fsize">${formatBytes(parseInt(f.size, 10))}</span></li>`
+    `<li><a class="fname" href="${escapeHtml(safeUrl(f.webViewLink))}" target="_blank" rel="noopener noreferrer" style="color:#333;text-decoration:none;">${escapeHtml(f.name)}</a><span class="fsize">${formatBytes(parseInt(f.size, 10))}</span></li>`
   ).join('') || '<li style="color:#888">No files to show</li>';
 
   // Duplicates
@@ -470,6 +472,14 @@ function personalizeCTA(byCat, dupeCount, wasted) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function safeUrl(u) {
+  if (typeof u !== 'string') return '#';
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === 'https:' ? parsed.href : '#';
+  } catch { return '#'; }
 }
 
 function resetApp() {
