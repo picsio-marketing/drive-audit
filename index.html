@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Google Drive Audit — Free tool by Pics.io</title>
+<meta name="description" content="See what's actually inside your Google Drive. Free audit shows file types, duplicates, and wasted space in 60 seconds." />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fafaf7;
+    color: #1a1a1a;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; margin-bottom: 32px; }
+  .logo { font-weight: 600; font-size: 18px; }
+  .logo span { color: #5b46f5; }
+  .badge { font-size: 11px; letter-spacing: 1px; color: #888; text-transform: uppercase; }
+
+  /* Landing */
+  .hero { text-align: center; padding: 48px 16px 32px; }
+  .hero h1 { font-size: 36px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .hero p { font-size: 17px; color: #555; max-width: 560px; margin: 0 auto 28px; }
+  .btn-primary {
+    background: #1a1a1a; color: white; border: none; padding: 14px 24px;
+    border-radius: 10px; font-size: 15px; font-weight: 500; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 10px;
+    transition: transform 0.1s, background 0.2s;
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .trust { margin-top: 14px; font-size: 13px; color: #888; }
+
+  .how {
+    background: white; border-radius: 16px; padding: 32px;
+    margin-top: 24px; border: 1px solid #ececec;
+  }
+  .how h2 { font-size: 18px; font-weight: 600; margin-bottom: 20px; text-align: center; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .step .num {
+    width: 28px; height: 28px; border-radius: 50%; background: #f3f0ff;
+    color: #5b46f5; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px; font-size: 13px;
+  }
+  .step h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .step p { font-size: 13px; color: #666; }
+
+  /* Scanning */
+  .scanning { text-align: center; padding: 80px 16px; }
+  .scanning h2 { font-size: 28px; font-weight: 500; margin-bottom: 8px; }
+  .scanning .sub { color: #666; margin-bottom: 32px; font-size: 15px; }
+  .progress-bar {
+    width: 100%; max-width: 420px; height: 6px; background: #ececec;
+    border-radius: 3px; overflow: hidden; margin: 0 auto 12px;
+  }
+  .progress-fill { height: 100%; background: #5b46f5; width: 0; transition: width 0.3s; }
+  .progress-label { font-size: 13px; color: #888; }
+
+  /* Results */
+  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .results-header h2 { font-size: 24px; font-weight: 600; }
+  .btn-secondary {
+    background: white; border: 1px solid #ddd; padding: 8px 14px;
+    border-radius: 8px; font-size: 13px; cursor: pointer; color: #333;
+  }
+  .btn-secondary:hover { background: #f5f5f5; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat {
+    background: white; border: 1px solid #ececec; border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .stat .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat .value { font-size: 24px; font-weight: 600; }
+  .stat.warn .value { color: #c67c00; }
+
+  .card {
+    background: white; border: 1px solid #ececec; border-radius: 12px;
+    padding: 24px; margin-bottom: 16px;
+  }
+  .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; align-items: center; }
+  .chart-box { height: 240px; position: relative; }
+
+  .breakdown-row { display: flex; align-items: center; margin-bottom: 12px; font-size: 14px; }
+  .breakdown-row:last-child { margin-bottom: 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+  .breakdown-row .name { flex: 1; }
+  .breakdown-row .meta { color: #888; font-size: 13px; }
+
+  .file-list { list-style: none; }
+  .file-list li {
+    display: flex; justify-content: space-between; padding: 10px 0;
+    border-bottom: 1px solid #f3f3f3; font-size: 14px;
+  }
+  .file-list li:last-child { border-bottom: none; }
+  .file-list .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
+  .file-list .fsize { color: #888; font-size: 13px; flex-shrink: 0; }
+
+  /* Pics.io CTA */
+  .cta-block {
+    background: linear-gradient(135deg, #5b46f5 0%, #7b6af7 100%);
+    color: white; border-radius: 16px; padding: 28px 32px;
+    display: flex; justify-content: space-between; align-items: center; gap: 24px;
+    margin-top: 24px;
+  }
+  .cta-block .text h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .cta-block .text p { font-size: 14px; opacity: 0.9; }
+  .cta-block a {
+    background: white; color: #5b46f5; text-decoration: none;
+    padding: 10px 18px; border-radius: 8px; font-weight: 500; font-size: 14px;
+    white-space: nowrap;
+  }
+
+  /* Error */
+  .error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+  .hidden { display: none !important; }
+
+  @media (max-width: 700px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 28px; }
+    .cta-block { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">Pics<span>.</span>io · Drive Audit</div>
+    <div class="badge">Free tool</div>
+  </div>
+
+  <!-- ============ STEP 1: LANDING ============ -->
+  <div id="view-landing">
+    <div class="hero">
+      <h1>What's actually in your Google Drive?</h1>
+      <p>Connect once and see every file type, the biggest space-eaters, and how many duplicates you're hoarding. Takes 60 seconds. Nothing leaves your browser.</p>
+
+      <div id="auth-error" class="error hidden"></div>
+
+      <button id="connect-btn" class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7.71 3.5L1.15 15l3.59 6.5h14.52L22.85 15 16.29 3.5H7.71z" fill="#FBBC04"/><path d="M1.15 15l3.59 6.5h7.27L8.42 15H1.15z" fill="#34A853"/><path d="M8.42 15l3.59 6.5h7.27L22.87 15H8.42z" fill="#4285F4"/><path d="M8.42 15L12.01 8.5 8.42 2H7.71L1.15 15h7.27z" fill="#EA4335"/></svg>
+        Connect Google Drive
+      </button>
+      <div class="trust">🔒 Read-only access · Files never leave Google · No account required</div>
+    </div>
+
+    <div class="how">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Sign in with Google</h3>
+          <p>Grants read-only metadata access. Revoke anytime.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>We scan metadata</h3>
+          <p>File names, sizes, types, checksums. Not contents.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>Get your audit</h3>
+          <p>Breakdown by type, duplicates, biggest files, recommendations.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STEP 2: SCANNING ============ -->
+  <div id="view-scanning" class="hidden">
+    <div class="scanning">
+      <h2 id="scan-count">Scanning…</h2>
+      <div class="sub" id="scan-status">Reading metadata from Google Drive</div>
+      <div class="progress-bar"><div class="progress-fill" id="scan-fill"></div></div>
+      <div class="progress-label" id="scan-label">Just a moment…</div>
+    </div>
+  </div>
+
+  <!-- ============ STEP 3: RESULTS ============ -->
+  <div id="view-results" class="hidden">
+    <div class="results-header">
+      <h2>Your Drive audit</h2>
+      <button class="btn-secondary" onclick="resetApp()">Run again</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Total files</div><div class="value" id="s-total">—</div></div>
+      <div class="stat"><div class="label">Storage used</div><div class="value" id="s-storage">—</div></div>
+      <div class="stat warn"><div class="label">Duplicates</div><div class="value" id="s-dupes">—</div></div>
+      <div class="stat warn"><div class="label">Wasted space</div><div class="value" id="s-wasted">—</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Breakdown by type</h3>
+      <div class="grid-2">
+        <div class="chart-box"><canvas id="pie"></canvas></div>
+        <div id="breakdown-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Top 10 largest files</h3>
+      <ul class="file-list" id="largest"></ul>
+    </div>
+
+    <div class="card">
+      <h3>Top duplicates (same content, different files)</h3>
+      <ul class="file-list" id="dupes-list"></ul>
+    </div>
+
+    <div class="cta-block">
+      <div class="text">
+        <h3 id="cta-headline">Your visual assets deserve better than this</h3>
+        <p id="cta-sub">Tags, versioning, search, sharing — that's what a real DAM does.</p>
+      </div>
+      <a href="https://pics.io/digital-asset-management" target="_blank">See Pics.io →</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ====================================================================
+// CONFIG — replace CLIENT_ID with your own Google OAuth client ID.
+// Get one at https://console.cloud.google.com → Credentials → OAuth 2.0
+// Add your domain to "Authorized JavaScript origins".
+// ====================================================================
+const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly';
+
+// MIME categorization
+const CATEGORIES = {
+  Images: { test: m => m.startsWith('image/'), color: '#7F77DD' },
+  Videos: { test: m => m.startsWith('video/'), color: '#1D9E75' },
+  Documents: { test: m => m.includes('document') || m.includes('msword') || m.includes('wordprocessing') || m === 'text/plain', color: '#D85A30' },
+  PDFs: { test: m => m === 'application/pdf', color: '#D4537E' },
+  Spreadsheets: { test: m => m.includes('spreadsheet') || m.includes('excel') || m === 'text/csv', color: '#378ADD' },
+  Presentations: { test: m => m.includes('presentation') || m.includes('powerpoint'), color: '#EF9F27' },
+  Archives: { test: m => m.includes('zip') || m.includes('rar') || m.includes('tar') || m.includes('7z'), color: '#888780' },
+  Folders: { test: m => m === 'application/vnd.google-apps.folder', color: '#B4B2A9' },
+  Other: { test: () => true, color: '#5F5E5A' }
+};
+
+function categorize(mime) {
+  for (const [name, cat] of Object.entries(CATEGORIES)) {
+    if (cat.test(mime)) return name;
+  }
+  return 'Other';
+}
+
+function formatBytes(b) {
+  if (!b) return '0 B';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return b.toFixed(b < 10 && i > 0 ? 1 : 0) + ' ' + u[i];
+}
+
+// ====================================================================
+// AUTH
+// ====================================================================
+let tokenClient;
+let accessToken = null;
+
+function initAuth() {
+  if (!window.google || !google.accounts) {
+    setTimeout(initAuth, 200);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { showError('Authorization failed: ' + resp.error); return; }
+      accessToken = resp.access_token;
+      runScan();
+    }
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+document.getElementById('connect-btn').addEventListener('click', () => {
+  document.getElementById('auth-error').classList.add('hidden');
+  if (CLIENT_ID.startsWith('YOUR_')) {
+    showError('⚠️ Set up CLIENT_ID in the source first. Open console.cloud.google.com → Credentials → OAuth 2.0 → paste ID into the HTML.');
+    return;
+  }
+  if (!tokenClient) { showError('Auth not ready yet. Refresh and try again.'); return; }
+  tokenClient.requestAccessToken();
+});
+
+// ====================================================================
+// SCAN — paginate Drive API, collect metadata
+// ====================================================================
+async function runScan() {
+  document.getElementById('view-landing').classList.add('hidden');
+  document.getElementById('view-scanning').classList.remove('hidden');
+
+  const files = [];
+  let pageToken = null;
+  let pageCount = 0;
+  const fields = 'nextPageToken, files(id, name, mimeType, size, md5Checksum, modifiedTime, webViewLink)';
+
+  try {
+    do {
+      pageCount++;
+      const url = new URL('https://www.googleapis.com/drive/v3/files');
+      url.searchParams.set('pageSize', '1000');
+      url.searchParams.set('fields', fields);
+      url.searchParams.set('q', 'trashed = false');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (!r.ok) throw new Error('Drive API error: ' + r.status);
+      const data = await r.json();
+
+      if (data.files) files.push(...data.files);
+      pageToken = data.nextPageToken;
+
+      document.getElementById('scan-count').textContent = files.length.toLocaleString() + ' files';
+      document.getElementById('scan-status').textContent = pageToken ? 'Still scanning…' : 'Wrapping up';
+      const pct = pageToken ? Math.min(85, pageCount * 8) : 100;
+      document.getElementById('scan-fill').style.width = pct + '%';
+      document.getElementById('scan-label').textContent = pct + '%';
+    } while (pageToken);
+
+    renderResults(files);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('view-scanning').classList.add('hidden');
+    document.getElementById('view-landing').classList.remove('hidden');
+    showError('Scan failed: ' + e.message);
+  }
+}
+
+// ====================================================================
+// RESULTS
+// ====================================================================
+function renderResults(files) {
+  const byCat = {};
+  let totalSize = 0;
+  Object.keys(CATEGORIES).forEach(c => byCat[c] = { count: 0, size: 0 });
+
+  files.forEach(f => {
+    const cat = categorize(f.mimeType || '');
+    const size = parseInt(f.size || 0, 10);
+    byCat[cat].count++;
+    byCat[cat].size += size;
+    totalSize += size;
+  });
+
+  // Duplicates: group by md5Checksum
+  const dupeGroups = {};
+  files.forEach(f => {
+    if (f.md5Checksum && f.size) {
+      if (!dupeGroups[f.md5Checksum]) dupeGroups[f.md5Checksum] = [];
+      dupeGroups[f.md5Checksum].push(f);
+    }
+  });
+  const dupes = Object.values(dupeGroups).filter(g => g.length > 1);
+  const dupeCount = dupes.reduce((a, g) => a + (g.length - 1), 0);
+  const wasted = dupes.reduce((a, g) => a + parseInt(g[0].size, 10) * (g.length - 1), 0);
+
+  // Top largest
+  const largest = files
+    .filter(f => f.size && f.mimeType !== 'application/vnd.google-apps.folder')
+    .sort((a, b) => parseInt(b.size, 10) - parseInt(a.size, 10))
+    .slice(0, 10);
+
+  // Top duplicate groups (by wasted space)
+  const topDupes = dupes
+    .map(g => ({ files: g, waste: parseInt(g[0].size, 10) * (g.length - 1) }))
+    .sort((a, b) => b.waste - a.waste)
+    .slice(0, 10);
+
+  // Stats
+  document.getElementById('s-total').textContent = files.length.toLocaleString();
+  document.getElementById('s-storage').textContent = formatBytes(totalSize);
+  document.getElementById('s-dupes').textContent = dupeCount.toLocaleString();
+  document.getElementById('s-wasted').textContent = formatBytes(wasted);
+
+  // Breakdown list
+  const activeCats = Object.entries(byCat).filter(([_, v]) => v.count > 0);
+  const breakdownEl = document.getElementById('breakdown-list');
+  breakdownEl.innerHTML = activeCats.map(([name, v]) =>
+    `<div class="breakdown-row">
+      <div class="dot" style="background:${CATEGORIES[name].color}"></div>
+      <div class="name">${name}</div>
+      <div class="meta">${v.count.toLocaleString()} · ${formatBytes(v.size)}</div>
+    </div>`
+  ).join('');
+
+  // Pie chart
+  const ctx = document.getElementById('pie').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: activeCats.map(([n]) => n),
+      datasets: [{
+        data: activeCats.map(([_, v]) => v.size || v.count),
+        backgroundColor: activeCats.map(([n]) => CATEGORIES[n].color),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      cutout: '60%'
+    }
+  });
+
+  // Largest files
+  document.getElementById('largest').innerHTML = largest.map(f =>
+    `<li><a class="fname" href="${f.webViewLink || '#'}" target="_blank" style="color:#333;text-decoration:none;">${escapeHtml(f.name)}</a><span class="fsize">${formatBytes(parseInt(f.size, 10))}</span></li>`
+  ).join('') || '<li style="color:#888">No files to show</li>';
+
+  // Duplicates
+  if (topDupes.length === 0) {
+    document.getElementById('dupes-list').innerHTML = '<li style="color:#888">Nice — no duplicates found 🎉</li>';
+  } else {
+    document.getElementById('dupes-list').innerHTML = topDupes.map(d =>
+      `<li><span class="fname">${escapeHtml(d.files[0].name)} <span style="color:#888">× ${d.files.length} copies</span></span><span class="fsize">${formatBytes(d.waste)} wasted</span></li>`
+    ).join('');
+  }
+
+  // Personalized CTA
+  personalizeCTA(byCat, dupeCount, wasted);
+
+  document.getElementById('view-scanning').classList.add('hidden');
+  document.getElementById('view-results').classList.remove('hidden');
+}
+
+function personalizeCTA(byCat, dupeCount, wasted) {
+  const images = byCat.Images.count;
+  const videos = byCat.Videos.count;
+  let headline = 'Your visual assets deserve better than this';
+  let sub = 'Tags, versioning, search, sharing — that\'s what a real DAM does.';
+
+  if (images >= 500) {
+    headline = `You have ${images.toLocaleString()} images and no way to tag or search them`;
+    sub = 'That\'s exactly what Pics.io solves.';
+  } else if (videos >= 30) {
+    headline = `${videos} videos sitting in folders with no previews or context`;
+    sub = 'A DAM gives every video a thumbnail, metadata, and search.';
+  } else if (dupeCount >= 50) {
+    headline = `${dupeCount} duplicates wasting ${formatBytes(wasted)}`;
+    sub = 'Pics.io de-dupes automatically and versions instead of copies.';
+  }
+  document.getElementById('cta-headline').textContent = headline;
+  document.getElementById('cta-sub').textContent = sub;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function resetApp() {
+  document.getElementById('view-results').classList.add('hidden');
+  document.getElementById('view-landing').classList.remove('hidden');
+  accessToken = null;
+}
+</script>
+
+<!-- Load Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer onload="initAuth()"></script>
+
+</body>
+</html>
